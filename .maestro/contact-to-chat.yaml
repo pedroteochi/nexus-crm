@@ -1,0 +1,45 @@
+# Maestro E2E — "login → contact → chat → Sandbox reply" happy path.
+#
+# Drives the running app on a simulator/device. Pass the app/bundle id and a
+# seeded Supabase test account (create one in Authentication → Users with
+# "Auto Confirm User"; the signup trigger seeds its demo data):
+#   maestro test \
+#     -e APP_ID=host.exp.Exponent \
+#     -e TEST_EMAIL=demo@nexuscrm.app -e TEST_PASSWORD=NexusDemo123 \
+#     .maestro/contact-to-chat.yaml
+#
+# For the Sandbox reply assertion at the end, run the app WITHOUT
+# EXPO_PUBLIC_API_URL (Sandbox Mode) — with a live proxy the reply text varies.
+#
+# Docs: https://maestro.mobile.dev
+appId: ${APP_ID}
+---
+- launchApp
+# The app opens on the login screen when there is no session — sign in first.
+# (Conditional: skipped if a previous session is still alive.)
+- runFlow:
+    when:
+      visible: 'Entre para acessar seu funil'
+    commands:
+      - tapOn: 'voce@empresa.com'
+      - inputText: ${TEST_EMAIL}
+      - tapOn: '••••••••'
+      - inputText: ${TEST_PASSWORD}
+      - tapOn: 'Entrar'
+# Land on the bottom tabs and open Contacts.
+- assertVisible: 'Contatos'
+- tapOn: 'Contatos'
+# Start (or resume) a chat from the first contact's message action.
+- tapOn:
+    text: 'Mensagem para .*'
+    index: 0
+# The chat screen is open and focused on the composer.
+- assertVisible: 'Campo de mensagem'
+- tapOn: 'Campo de mensagem'
+- inputText: 'Olá, tudo bem?'
+- tapOn: 'Enviar mensagem'
+# Our message shows immediately…
+- assertVisible: 'Olá, tudo bem?'
+# …and the Sandbox assistant reply lands shortly after (Maestro auto-retries the assert).
+- assertVisible:
+    text: '.*Modo Sandbox.*'
